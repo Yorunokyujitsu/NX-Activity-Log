@@ -72,7 +72,7 @@ OUTPUT		:=	$(CURDIR)/$(TARGET)
 #---------------------------------------------------------------------------------
 DEFINES		:=	-D__SWITCH__ -DVER_MAJOR=$(VER_MAJOR) -DVER_MINOR=$(VER_MINOR) -DVER_MICRO=$(VER_MICRO) -DVER_STRING=\"$(VER_MAJOR).$(VER_MINOR).$(VER_MICRO)\"
 CFLAGS		:=	-g -Wall -O2 -ffunction-sections $(ARCH) $(DEFINES) $(INCLUDE) `freetype-config --cflags` `sdl2-config --cflags`
-CXXFLAGS	:=	$(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++2a
+CXXFLAGS	:=	$(CFLAGS) -fno-rtti -fno-exceptions -std=c++23
 
 #----------------------------------------------------------------------------------------------------------------------
 # Definition of variables which store file locations
