@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  issue_comment:
+    types: [ created ]
+
+jobs:
+  build_and_release:
+    name: Build and release
+    runs-on: ubuntu-latest
+    container: devkitpro/devkita64:latest
+    if: contains(github.event.comment.body, '/release-action')
+
+    steps:
+      - name: Update packages
+        run: |
+          sudo -n apt-get update
+          sudo -n apt-get upgrade -y git build-essential
+        shell: bash
+      - name: Update latest libnx
+        run: |
+          git config --global --add safe.directory "*"
+          git clone --recurse-submodules https://github.com/zdm65477730/libnx.git
+          cd libnx
+          make install -j$(nproc)
+        shell: bash
+      - name: Checkout latest code
+        uses: actions/checkout@v4.1.1
+        with:
+          ref: master
+          clean: true
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: recursive
+      - name: Setup ENV parameters
+        run: |
+          rev=$(echo "$(git rev-parse --short=9 HEAD)")
+          VER_FILE=Application/Makefile
+          VERSION=$(awk '/^VER_MAJOR/{print $3}' $VER_FILE).$(awk '/^VER_MINOR/{print $3}' $VER_FILE).$(awk '/^VER_MICRO/{print $3}' $VER_FILE)
+          echo "TAG=${VERSION}-${rev}" >> "${GITHUB_ENV}"
+          echo "RELEASE_NAME=NX-Activity-Log ${VERSION}" >> "${GITHUB_ENV}"
+        shell: bash
+      - name: Build
+        run: |
+          export DEVKITPRO=/opt/devkitpro
+          make -j$(nproc)
+        shell: bash
+      - name: Github Release create, update, and upload assets
+        uses: meeDamian/github-release@v2.0.3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ env.TAG }}
+          name: ${{ env.RELEASE_NAME }}
+          gzip: false
+          files: >
+            sdcard/switch/NX-Activity-Log/NX-Activity-Log.nro
+          allow_override: yes
