@@ -46,7 +46,7 @@ jobs:
           make -j$(nproc)
         shell: bash
       - name: Github Release create, update, and upload assets
-        uses: meeDamian/github-release@v2.0.3
+        uses: ivan-the-terrible/github-release@v2.0.4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ env.TAG }}
