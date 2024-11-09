@@ -39,6 +39,8 @@ jobs:
           VERSION=$(awk '/^VER_MAJOR/{print $3}' $VER_FILE).$(awk '/^VER_MINOR/{print $3}' $VER_FILE).$(awk '/^VER_MICRO/{print $3}' $VER_FILE)
           echo "TAG=${VERSION}-${rev}" >> "${GITHUB_ENV}"
           echo "RELEASE_NAME=NX-Activity-Log ${VERSION}" >> "${GITHUB_ENV}"
+          echo "REV=${rev}" > "${GITHUB_ENV}"
+          echo "RELEASE_PATH=/opt/images" >> "${GITHUB_ENV}"
         shell: bash
       - name: Build
         run: |
