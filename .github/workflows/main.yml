@@ -34,11 +34,9 @@ jobs:
           submodules: recursive
       - name: Setup ENV parameters
         run: |
-          rev=$(echo "$(git rev-parse --short=9 HEAD)")
           VER_FILE=Application/Makefile
           VERSION=$(awk '/^VER_MAJOR/{print $3}' $VER_FILE).$(awk '/^VER_MINOR/{print $3}' $VER_FILE).$(awk '/^VER_MICRO/{print $3}' $VER_FILE)
-          echo "REV=${rev}" > "${GITHUB_ENV}"
-          echo "TAG=${VERSION}-support-new-hos" >> "${GITHUB_ENV}"
+          echo "TAG=${VERSION}-support-new-hos" > "${GITHUB_ENV}"
           echo "RELEASE_NAME=NX-Activity-Log ${VERSION}" >> "${GITHUB_ENV}"
         shell: bash
       - name: Build
@@ -46,13 +44,14 @@ jobs:
           export DEVKITPRO=/opt/devkitpro
           make -j$(nproc)
         shell: bash
-      - name: Github Release create, update, and upload assets
-        uses: ivan-the-terrible/github-release@v2.0.4
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2.0.9
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ env.TAG }}
           name: ${{ env.RELEASE_NAME }}
-          gzip: false
-          files: >
-            sdcard/switch/NX-Activity-Log/NX-Activity-Log.nro
-          allow_override: yes
+          tag_name: ${{ env.TAG }}
+          draft: false
+          prerelease: false
+          generate_release_notes: yes
+          make_latest: true
+          files: |
+            ./sdcard/switch/NX-Activity-Log/NX-Activity-Log.nro
