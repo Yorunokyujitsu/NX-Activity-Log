@@ -37,7 +37,7 @@ jobs:
           VER_FILE=Application/Makefile
           VERSION=$(awk '/^VER_MAJOR/{print $3}' $VER_FILE).$(awk '/^VER_MINOR/{print $3}' $VER_FILE).$(awk '/^VER_MICRO/{print $3}' $VER_FILE)
           echo "TAG=v${VERSION}" > "${GITHUB_ENV}"
-          echo "RELEASE_NAME=NX-Activity-Log ${VERSION}" >> "${GITHUB_ENV}"
+          echo "RELEASE_NAME=NX-Activity-Log v${VERSION}" >> "${GITHUB_ENV}"
         shell: bash
       - name: Build
         run: |
