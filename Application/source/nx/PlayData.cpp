@@ -6,9 +6,10 @@
 #include "nx/PlayData.hpp"
 #include "utils/NX.hpp"
 #include "utils/Time.hpp"
+#include "utils/Debug.hpp"
 
 // Maximum number of entries to process in one iteration
-#define MAX_PROCESS_ENTRIES_PER_TIME 100
+#define MAX_PROCESS_ENTRIES 4096
 
 namespace NX {
     std::vector<PD_Session> PlayData::getPDSessions(TitleID titleID, AccountUid userID, u64 start_ts, u64 end_ts) {
@@ -164,32 +165,24 @@ namespace NX {
     }
 
     PlayEventsAndSummaries PlayData::readPlayDataFromPdm() {
+        Utils::write_log("readPlayDataFromPdm() enter");
+
         PlayEventsAndSummaries ret;
-        Result rc;
 
-        // Position of first and last event to read
-        s32 startEntryIndex = -1;
-        s32 endEntryIndex = -1;
+        // Position of first event to read
+        s32 offset = 0;
         // Total events read in iteration
-        s32 totalEntries = -1;
+        s32 total_read = 1;
 
-        rc = pdmqryGetAvailablePlayEventRange(&totalEntries, &startEntryIndex, &endEntryIndex);
-        if (R_FAILED(rc) || !totalEntries)
-            return ret;
+        // Array to store read events
+        PdmPlayEvent * pEvents = new PdmPlayEvent[MAX_PROCESS_ENTRIES];
 
-        s32 count = totalEntries;
-        s32 offset = startEntryIndex;
         // Read all events
-        while (count) {
-            s32 total_read = -1;
-
-            // Array to store read events
-            PdmPlayEvent * pEvents = new PdmPlayEvent[MAX_PROCESS_ENTRIES_PER_TIME];
-            Result rc = pdmqryQueryPlayEvent(offset, pEvents, MAX_PROCESS_ENTRIES_PER_TIME, &total_read);
+        while (total_read > 0) {
+            Result rc = pdmqryQueryPlayEvent(offset, pEvents, MAX_PROCESS_ENTRIES, &total_read);
             if (R_SUCCEEDED(rc)) {
                 // Set next read position to next event
                 offset += total_read;
-                count -= total_read;
 
                 // Process read events
                 for (s32 i = 0; i < total_read; i++) {
@@ -253,7 +246,6 @@ namespace NX {
                                     break;
                             }
                             break;
-
                         // Do nothing for other event types
                         default:
                             continue;
@@ -268,18 +260,23 @@ namespace NX {
                     ret.first.push_back(event);
                 }
             }
-            // Free memory allocated to array
-            delete[] pEvents;
+            Utils::write_log("pdmqryQueryPlayEvent() called, rc=" + std::to_string(rc) + " offset=" + std::to_string(offset) + " total_read=" + std::to_string(total_read));
         }
 
+        // Free memory allocated to array
+        delete[] pEvents;
+
+        Utils::write_log("readPlayDataFromPdm() exit");
         return ret;
     }
 
     PlayEventsAndSummaries PlayData::readPlayDataFromImport() {
         PlayEventsAndSummaries ret;
 
+        Utils::write_log("readPlayDataFromImport() enter");
         // Abort if no file
         if (!std::filesystem::exists("/switch/NX-Activity-Log/importedData.json")) {
+            Utils::write_log("readPlayDataFromImport() exit");
             return ret;
         }
 
@@ -308,7 +305,7 @@ namespace NX {
                         if (event["clockTimestamp"] != nullptr && event["steadyTimestamp"] != nullptr && event["type"] != nullptr) {
                             EventType type = static_cast<EventType>(event["type"]);
 
-                            PlayEvent * evt = new PlayEvent;
+                            PlayEvent *evt = new PlayEvent;
                             evt->type = (type == Account_Active || type == Account_Inactive ? PlayEvent_Account : PlayEvent_Applet);
                             evt->userID = {user["id"][0], user["id"][1]};
                             evt->titleID = title["id"];
@@ -340,24 +337,23 @@ namespace NX {
 
                 // Store data if entry added
                 if (hasEntry) {
-                    std::vector<std::pair<u64, std::string>>::iterator it = std::find_if(this->titles.begin(), this->titles.end(), [title](std::pair<u64, std::string> entry) {
-                        return (title["id"] == entry.first);
-                    });
-                    if (it == this->titles.end()) {
-                        if (title["id"] != 0) {
-                            this->titles.push_back(std::make_pair(title["id"], title["name"]));
-                        }
+                    if (std::find_if(this->titles.begin(), this->titles.end(), [title](std::pair<u64, std::string> entry) { return (title["id"] == entry.first && title["id"] != 0); }) == this->titles.end()) {
+                        this->titles.push_back(std::make_pair(title["id"], title["name"]));
                     }
                 }
             }
+
+            Utils::write_log("Parse user data from importedData.json finished!");
         }
 
+        Utils::write_log("readPlayDataFromImport() exit");
         return ret;
     }
 
     std::vector<PlayEvent *> PlayData::mergePlayEvents(std::vector<PlayEvent *> & one, std::vector<PlayEvent *> & two) {
         std::vector<PlayEvent *> merged = one;
 
+        Utils::write_log("mergePlayEvents enter");
         for (PlayEvent * event : two) {
             std::vector<PlayEvent *>::iterator it = std::find_if(one.begin(), one.end(), [event](PlayEvent * pot) {
                 return (event->type == pot->type && event->titleID == pot->titleID &&
@@ -374,6 +370,7 @@ namespace NX {
 
         one.clear();
         two.clear();
+        Utils::write_log("mergePlayEvents exit");
         return merged;
     }
 
@@ -389,8 +386,10 @@ namespace NX {
         PlayEventsAndSummaries pdmData = pdmThread.get();
         PlayEventsAndSummaries impData = impThread.get();
 
+        Utils::write_log("Read in all data simultaneously finished");
         this->events = this->mergePlayEvents(pdmData.first, impData.first);
         this->summaries = impData.second;
+        Utils::write_log("mergePlayEvents() finished");
     }
 
     std::vector<Title *> PlayData::getMissingTitles(std::vector<Title *> passed) {
