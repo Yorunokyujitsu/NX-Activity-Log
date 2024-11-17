@@ -22,7 +22,7 @@ namespace NX {
                 size_t s = a;
                 bool time_c = false;
                 bool titleID_c = false;
-                if (titleID == 0 || this->events[a]->titleID == titleID) {
+                if (this->events[a]->titleID == titleID) {
                     titleID_c = true;
                 }
                 bool userID_c = false;
@@ -482,10 +482,6 @@ namespace NX {
         }
 
         return sessions;
-    }
-
-    RecentPlayStatistics * PlayData::getRecentStatisticsForUser(u64 start_ts, u64 end_ts, AccountUid userID) {
-        return this->countPlaytime(this->getPDSessions(0, userID, start_ts, end_ts), start_ts, end_ts);
     }
 
     RecentPlayStatistics * PlayData::getRecentStatisticsForTitleAndUser(TitleID titleID, u64 start_ts, u64 end_ts, AccountUid userID) {

@@ -15,6 +15,9 @@ namespace Screen {
             // Pointer to app for theme
             Main::Application * app;
 
+            // Returns active user's total play time in second for the given time range
+            uint64_t getUserTotalSecsForAllTitles(struct tm t, struct tm e);
+
             // Updates the "recent activity" part of the screen
             void updateActivity();
             // Updates graph if data matching current time range
