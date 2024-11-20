@@ -66,23 +66,6 @@ namespace Screen {
         });
     }
 
-    uint64_t RecentActivity::getUserTotalSecsForAllTitles(struct tm begin, struct tm end) {
-        uint64_t totalSecs = 0;
-        std::vector<uint64_t> hidden = this->app->config()->hiddenTitles();
-        NX::RecentPlayStatistics *s = nullptr;
-        for (auto title : this->app->titleVector()) {
-            // Skip over hidden games
-            if (std::find(hidden.begin(), hidden.end(), title->titleID()) != hidden.end())
-                continue;
-            s = this->app->playdata()->getRecentStatisticsForTitleAndUser(title->titleID(), Utils::Time::getTimeT(begin), Utils::Time::getTimeT(end), this->app->activeUser()->ID());
-            // Only show games that have actually been played
-            if (s->launches > 0)
-                totalSecs += s->playtime;
-            delete s;
-        }
-        return totalSecs;
-    }
-
     void RecentActivity::updateActivity() {
         // Check if there is any activity + update heading
         struct tm t = this->app->time();
@@ -110,8 +93,7 @@ namespace Screen {
         }
         this->graphHeading->setString(Utils::Time::dateToActivityForString(t, this->app->viewPeriod()));
         this->graphHeading->setX(this->header->x() + (this->header->w() - this->graphHeading->w())/2);
-
-        uint64_t totalSecs = getUserTotalSecsForAllTitles(t, e);
+        NX::RecentPlayStatistics * ps = this->app->playdata()->getRecentStatisticsForUser(Utils::Time::getTimeT(t), Utils::Time::getTimeT(e), this->app->activeUser()->ID());
 
         // Remove current sessions regardless
         this->list->removeElementsAfter(this->topElm);
@@ -120,7 +102,7 @@ namespace Screen {
         }
 
         // Only update list if there is activity
-        if (totalSecs != 0) {
+        if (ps->playtime != 0) {
             this->gameHeading->setHidden(false);
             this->graph->setHidden(false);
             this->graphSubheading->setHidden(false);
@@ -139,6 +121,8 @@ namespace Screen {
             this->list->setCanScroll(false);
             this->noStats->setHidden(false);
         }
+
+        delete ps;
     }
 
     void RecentActivity::update(uint32_t dt) {
@@ -199,8 +183,6 @@ namespace Screen {
         // Read playtime and set graph values
         struct tm t = tm;
         uint64_t totalSecs = 0;
-        std::vector<uint64_t> hidden = this->app->config()->hiddenTitles();
-        NX::RecentPlayStatistics *s = nullptr;
         switch (this->app->viewPeriod()) {
             case ViewPeriod::Day: {
                 t.tm_min = 0;
@@ -211,8 +193,9 @@ namespace Screen {
                 for (size_t i = 0; i < this->graph->entries(); i++) {
                     t.tm_hour = i;
                     e.tm_hour = i;
-                    totalSecs = getUserTotalSecsForAllTitles(t, e);
-                    double val = totalSecs/60.0;
+                    NX::RecentPlayStatistics * s = this->app->playdata()->getRecentStatisticsForUser(Utils::Time::getTimeT(t), Utils::Time::getTimeT(e), this->app->activeUser()->ID());
+                    totalSecs += s->playtime;
+                    double val = s->playtime/60.0;
                     this->graph->setValue(i, val);
                     delete s;
                 }
@@ -231,11 +214,12 @@ namespace Screen {
                 for (size_t i = 0; i < this->graph->entries(); i++) {
                     t.tm_mday = i + 1;
                     e.tm_mday = i + 1;
-                    totalSecs = getUserTotalSecsForAllTitles(t, e);
-                    if (totalSecs > max) {
-                        max = totalSecs;
+                    NX::RecentPlayStatistics * s = this->app->playdata()->getRecentStatisticsForUser(Utils::Time::getTimeT(t), Utils::Time::getTimeT(e), this->app->activeUser()->ID());
+                    totalSecs += s->playtime;
+                    if (s->playtime > max) {
+                        max = s->playtime;
                     }
-                    double val = totalSecs/60/60.0;
+                    double val = s->playtime/60/60.0;
                     this->graph->setValue(i, val);
                     delete s;
                 }
@@ -265,12 +249,14 @@ namespace Screen {
                     t.tm_mon = i;
                     e.tm_mon = i;
                     e.tm_mday = Utils::Time::tmGetDaysInMonth(t);
-                    totalSecs = getUserTotalSecsForAllTitles(t, e);
-                    if (totalSecs > max) {
-                        max = totalSecs;
+                    NX::RecentPlayStatistics * s = this->app->playdata()->getRecentStatisticsForUser(Utils::Time::getTimeT(t), Utils::Time::getTimeT(e), this->app->activeUser()->ID());
+                    totalSecs += s->playtime;
+                    if (s->playtime > max) {
+                        max = s->playtime;
                     }
-                    double val = totalSecs/60/60.0;
+                    double val = s->playtime/60/60.0;
                     this->graph->setValue(i, val);
+                    delete s;
                 }
                 max /= 60.0;
                 max /= 60.0;
@@ -325,11 +311,6 @@ namespace Screen {
         std::vector<std::pair<NX::RecentPlayStatistics *, unsigned int> > stats;
         std::vector<uint64_t> hidden = this->app->config()->hiddenTitles();
         for (size_t i = 0; i < this->app->titleVector().size(); i++) {
-            // Skip over hidden games
-            if (std::find(hidden.begin(), hidden.end(), this->app->titleVector()[i]->titleID()) != hidden.end()) {
-                continue;
-            }
-
             std::pair<NX::RecentPlayStatistics *, unsigned int> stat;
             stat.first = this->app->playdata()->getRecentStatisticsForTitleAndUser(this->app->titleVector()[i]->titleID(), s, e, this->app->activeUser()->ID());
             stat.second = i;
@@ -342,30 +323,33 @@ namespace Screen {
         });
 
         // Add to list
+        bool isHidden = false;
         for (auto stat : stats) {
-            // Only show games that have actually been played
-            if (stat.first->launches > 0) {
-                totalSecs += stat.first->playtime;
-                CustomElm::ListActivity * la = new CustomElm::ListActivity();
-                la->setImage(this->app->titleVector()[stat.second]->imgPtr(), this->app->titleVector()[stat.second]->imgSize());
-                la->setTitle(this->app->titleVector()[stat.second]->name());
-                la->setPlaytime(Utils::playtimeToPlayedForString(stat.first->playtime));
-                la->setLeftMuted(Utils::launchesToPlayedString(stat.first->launches));
-                unsigned int j = stat.second;
-                la->onPress([this, j](){
-                    this->app->setActiveTitle(j);
-                    this->app->pushScreen();
-                    this->app->setScreen(ScreenID::Details);
-                });
-                la->setTitleColour(this->app->theme()->text());
-                la->setPlaytimeColour(this->app->theme()->accent());
-                la->setMutedColour(this->app->theme()->mutedText());
-                la->setLineColour(this->app->theme()->mutedLine());
-                this->list->addElement(la);
+            totalSecs += stat.first->playtime;
+            isHidden = std::find(hidden.begin(), hidden.end(), this->app->titleVector()[stat.second]->titleID()) != hidden.end();
+            // Only show games that have actually been played and skip over hidden games
+            if (stat.first->launches == 0 || isHidden) {
+                // Can delete each pointer after it's accessed
+                delete stat.first;
+                continue;
             }
 
-            // Can delete each pointer after it's accessed
-            delete stat.first;
+            CustomElm::ListActivity * la = new CustomElm::ListActivity();
+            la->setImage(this->app->titleVector()[stat.second]->imgPtr(), this->app->titleVector()[stat.second]->imgSize());
+            la->setTitle(this->app->titleVector()[stat.second]->name());
+            la->setPlaytime(Utils::playtimeToPlayedForString(stat.first->playtime));
+            la->setLeftMuted(Utils::launchesToPlayedString(stat.first->launches));
+            unsigned int j = stat.second;
+            la->onPress([this, j](){
+                this->app->setActiveTitle(j);
+                this->app->pushScreen();
+                this->app->setScreen(ScreenID::Details);
+            });
+            la->setTitleColour(this->app->theme()->text());
+            la->setPlaytimeColour(this->app->theme()->accent());
+            la->setMutedColour(this->app->theme()->mutedText());
+            la->setLineColour(this->app->theme()->mutedLine());
+            this->list->addElement(la);
         }
 
         // Update playtime string

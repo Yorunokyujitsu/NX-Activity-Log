@@ -118,6 +118,9 @@ namespace NX {
             // Returns all play sessions for the given title ID and user ID
             std::vector<PlaySession> getPlaySessionsForUser(TitleID, AccountUid);
 
+            // Returns a RecentPlayStatistics for the given time range and user ID for all Title IDs
+            RecentPlayStatistics * getRecentStatisticsForUser(u64, u64, AccountUid);
+
             // Returns a RecentPlayStatistics for the given time range, user ID and title ID
             RecentPlayStatistics * getRecentStatisticsForTitleAndUser(TitleID, u64, u64, AccountUid);
 
