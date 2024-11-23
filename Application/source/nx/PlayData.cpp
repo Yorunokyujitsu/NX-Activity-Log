@@ -260,11 +260,20 @@ namespace NX {
                     ret.first.push_back(event);
                 }
             }
-            Utils::write_log("pdmqryQueryPlayEvent() called, rc=" + std::to_string(rc) + " offset=" + std::to_string(offset) + " total_read=" + std::to_string(total_read));
         }
 
         // Free memory allocated to array
         delete[] pEvents;
+
+#ifdef ENABLE_DEBUG
+        for (auto event : ret.first) {
+            if (event->userID.uid[1] == 0 && event->userID.uid[0] == 0) {
+                Utils::write_log("offset=%d, event: type=%u titleID=%016llx applet_type: %u clockTimestamp=%llu steadyTimestamp=%llu", offset, event->type, event->titleID, event->eventType, event->clockTimestamp, event->steadyTimestamp);
+            } else {
+                Utils::write_log("offset=%d, event: type=%u userID=%016llx_%016llx account_type: %u clockTimestamp=%llu steadyTimestamp=%llu", offset, event->type, event->userID.uid[1], event->userID.uid[0], event->eventType, event->clockTimestamp, event->steadyTimestamp);
+            }
+        }
+#endif
 
         Utils::write_log("readPlayDataFromPdm() exit");
         return ret;

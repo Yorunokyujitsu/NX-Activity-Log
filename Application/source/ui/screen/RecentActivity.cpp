@@ -237,10 +237,11 @@ namespace Screen {
             this->graphSubheading->setX(this->header->x() + (this->header->w() - this->graphSubheading->w())/2);
 
             // update Titles
+            t = begin;
             t.tm_min = 0;
             t.tm_sec = 0;
             // Minus one second so end time is 11:59pm and not 12:00am next day
-            unsigned int end_time;
+            time_t end_time = 0;
             switch (this->app->viewPeriod()) {
                 case ViewPeriod::Day:
                     t.tm_hour = 0;
@@ -252,7 +253,7 @@ namespace Screen {
                     end_time = Utils::Time::getTimeT(Utils::Time::increaseTm(t, 'M')) - 1;
                     break;
                 case ViewPeriod::Year:
-                    t.tm_mon = 1;
+                    t.tm_mon = 0;
                     t.tm_mday = 1;
                     t.tm_hour = 0;
                     end_time = Utils::Time::getTimeT(Utils::Time::increaseTm(t, 'Y')) - 1;

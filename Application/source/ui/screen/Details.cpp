@@ -3,6 +3,8 @@
 #include "utils/Lang.hpp"
 #include "ui/element/ListSession.hpp"
 #include "utils/Utils.hpp"
+#include "utils/Time.hpp"
+#include "utils/Debug.hpp"
 
 // Values for summary appearance
 #define SUMMARY_BOX_HEIGHT 60
@@ -268,15 +270,15 @@ namespace Screen {
 
             // update sessions
             // Get relevant play stats
-            //NX::PlayStatistics * pss = this->app->playdata()->getStatisticsForUser(this->app->activeTitle()->titleID(), this->app->activeUser()->ID());
             NX::RecentPlayStatistics *pss = this->app->playdata()->getRecentStatisticsForTitleAndUser(this->app->activeTitle()->titleID(), std::numeric_limits<u64>::min(), std::numeric_limits<u64>::max(), this->app->activeUser()->ID());
             std::vector<NX::PlaySession> stats = this->app->playdata()->getPlaySessionsForUser(this->app->activeTitle()->titleID(), this->app->activeUser()->ID());
 
+            t = begin;
             t.tm_min = 0;
             t.tm_sec = 0;
             // Minus one second so end time is 11:59pm and not 12:00am next day
-            unsigned int start_time;
-            unsigned int end_time;
+            time_t start_time = 0;
+            time_t end_time = 0;
             switch (this->app->viewPeriod()) {
                 case ViewPeriod::Day:
                     t.tm_hour = 0;
@@ -290,7 +292,7 @@ namespace Screen {
                     end_time = Utils::Time::getTimeT(Utils::Time::increaseTm(t, 'M')) - 1;
                     break;
                 case ViewPeriod::Year:
-                    t.tm_mon = 1;
+                    t.tm_mon = 0;
                     t.tm_mday = 1;
                     t.tm_hour = 0;
                     start_time = Utils::Time::getTimeT(t);
@@ -303,7 +305,7 @@ namespace Screen {
             // Add sessions to list
             for (size_t i = 0; i < stats.size(); i++) {
                 // Only add session if start or end is within the current time period
-                if (stats[i].startTimestamp > end_time || stats[i].endTimestamp < start_time) {
+                if (stats[i].startTimestamp > static_cast<u64>(end_time) || stats[i].endTimestamp < static_cast<u64>(start_time)) {
                     continue;
                 }
 
@@ -321,13 +323,13 @@ namespace Screen {
 
                 // If started before range set start as start of range
                 bool outRange = false;
-                if (stats[i].startTimestamp < start_time) {
+                if (stats[i].startTimestamp < static_cast<u64>(start_time)) {
                     outRange = true;
                     sTm = Utils::Time::getTm(start_time);
                 }
 
                 // If finished after range set end as end of range
-                if (stats[i].endTimestamp > end_time) {
+                if (stats[i].endTimestamp > static_cast<u64>(end_time)) {
                     outRange = true;
                     eTm = Utils::Time::getTm(end_time);
                 }
