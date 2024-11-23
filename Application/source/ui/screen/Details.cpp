@@ -268,7 +268,8 @@ namespace Screen {
 
             // update sessions
             // Get relevant play stats
-            NX::PlayStatistics * pss = this->app->playdata()->getStatisticsForUser(this->app->activeTitle()->titleID(), this->app->activeUser()->ID());
+            //NX::PlayStatistics * pss = this->app->playdata()->getStatisticsForUser(this->app->activeTitle()->titleID(), this->app->activeUser()->ID());
+            NX::RecentPlayStatistics *pss = this->app->playdata()->getRecentStatisticsForTitleAndUser(this->app->activeTitle()->titleID(), std::numeric_limits<u64>::min(), std::numeric_limits<u64>::max(), this->app->activeUser()->ID());
             std::vector<NX::PlaySession> stats = this->app->playdata()->getPlaySessionsForUser(this->app->activeTitle()->titleID(), this->app->activeUser()->ID());
 
             t.tm_min = 0;
@@ -378,7 +379,7 @@ namespace Screen {
 
                 // Add percentage of total playtime
                 std::string str;
-                double percent = 100 * ((double)playtime / ((ps->playtime == 0 || ps->playtime < playtime) ? playtime : ps->playtime));
+                double percent = 100 * ((double)playtime / ((pss->playtime == 0 || pss->playtime < playtime) ? playtime : ps->playtime));
                 percent = Utils::roundToDecimalPlace(percent, 2);
                 if (percent < 0.01) {
                     str = "< 0.01%";
@@ -642,7 +643,8 @@ namespace Screen {
 
         // Get statistics and append adjustment if needed
         std::vector<AdjustmentValue> adjustments = this->app->config()->adjustmentValues();
-        NX::PlayStatistics * ps = this->app->playdata()->getStatisticsForUser(this->app->activeTitle()->titleID(), this->app->activeUser()->ID());
+        NX::PlayStatistics * pss = this->app->playdata()->getStatisticsForUser(this->app->activeTitle()->titleID(), this->app->activeUser()->ID());
+        NX::RecentPlayStatistics *ps = this->app->playdata()->getRecentStatisticsForTitleAndUser(this->app->activeTitle()->titleID(), std::numeric_limits<u64>::min(), std::numeric_limits<u64>::max(), this->app->activeUser()->ID());
         std::vector<AdjustmentValue>::iterator it = std::find_if(adjustments.begin(), adjustments.end(), [this](AdjustmentValue val) {
             return (val.titleID == this->app->activeTitle()->titleID() && val.userID == this->app->activeUser()->ID());
         });
@@ -652,8 +654,8 @@ namespace Screen {
 
         if (ps->launches == 0) {
             // Add in dummy data if not launched before (due to adjustment)
-            ps->firstPlayed = Utils::Time::posixTimestampToPdm(Utils::Time::getTimeT(Utils::Time::getTmForCurrentTime()));
-            ps->lastPlayed = ps->firstPlayed;
+            pss->firstPlayed = Utils::Time::posixTimestampToPdm(Utils::Time::getTimeT(Utils::Time::getTmForCurrentTime()));
+            pss->lastPlayed = pss->firstPlayed;
             ps->launches = 1;
         }
 
@@ -672,15 +674,16 @@ namespace Screen {
         this->timeplayed->setX(this->timeplayed->x() - this->timeplayed->w()/2);
         this->addElement(this->timeplayed);
 
-        this->firstplayed = new Aether::Text(1070, 490, Utils::Time::timestampToString(ps->firstPlayed), 20);
+        this->firstplayed = new Aether::Text(1070, 490, Utils::Time::timestampToString(pss->firstPlayed), 20);
         this->firstplayed->setColour(this->app->theme()->accent());
         this->firstplayed->setX(this->firstplayed->x() - this->firstplayed->w()/2);
         this->addElement(this->firstplayed);
 
-        this->lastplayed = new Aether::Text(1070, 580, Utils::Time::timestampToString(ps->lastPlayed), 20);
+        this->lastplayed = new Aether::Text(1070, 580, Utils::Time::timestampToString(pss->lastPlayed), 20);
         this->lastplayed->setColour(this->app->theme()->accent());
         this->lastplayed->setX(this->lastplayed->x() - this->lastplayed->w()/2);
         this->addElement(this->lastplayed);
+        delete pss;
         delete ps;
 
         // Show update icon if needbe

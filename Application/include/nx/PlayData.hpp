@@ -24,12 +24,12 @@ namespace NX {
 
     // PlayEvents are parsed PdmPlayEvents containing only necessary information
     struct PlayEvent {
-        PlayEventType type;     // Type of PlayEvent
-        AccountUid userID;      // UserID
-        TitleID titleID;        // TitleID
-        EventType eventType;    // See EventType enum
-        u64 clockTimestamp;     // Time of event
-        u64 steadyTimestamp;    // Steady timestamp (used for calculating duration)
+        PlayEventType type;        // Type of PlayEvent
+        AccountUid userID;         // UserID
+        TitleID titleID;           // TitleID
+        EventType eventType;       // See EventType enum
+        u64 clockTimestamp;        // Time of event
+        u64 steadyTimestamp;       // Steady timestamp (used for calculating duration)
     };
 
     // A PlaySession represents a session of play for a game. It contains the start
