@@ -142,7 +142,7 @@ namespace Screen {
             totalSecs += ps->playtime;
             if (ps->launches == 0) {
                 // Add in dummy data if not launched before (due to adjustment)
-                ps2->firstPlayed = Utils::Time::posixTimestampToPdm(Utils::Time::getTimeT(Utils::Time::getTmForCurrentTime()));
+                ps2->firstPlayed = Utils::Time::getTimeT(Utils::Time::getTmForCurrentTime());
                 ps2->lastPlayed = ps2->firstPlayed;
                 ps->launches = 1;
 

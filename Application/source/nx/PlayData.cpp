@@ -165,8 +165,6 @@ namespace NX {
     }
 
     PlayEventsAndSummaries PlayData::readPlayDataFromPdm() {
-        Utils::write_log("readPlayDataFromPdm() enter");
-
         PlayEventsAndSummaries ret;
 
         // Position of first event to read
@@ -275,17 +273,14 @@ namespace NX {
         }
 #endif
 
-        Utils::write_log("readPlayDataFromPdm() exit");
         return ret;
     }
 
     PlayEventsAndSummaries PlayData::readPlayDataFromImport() {
         PlayEventsAndSummaries ret;
 
-        Utils::write_log("readPlayDataFromImport() enter");
         // Abort if no file
         if (!std::filesystem::exists("/switch/NX-Activity-Log/importedData.json")) {
-            Utils::write_log("readPlayDataFromImport() exit");
             return ret;
         }
 
@@ -351,18 +346,13 @@ namespace NX {
                     }
                 }
             }
-
-            Utils::write_log("Parse user data from importedData.json finished!");
         }
-
-        Utils::write_log("readPlayDataFromImport() exit");
         return ret;
     }
 
     std::vector<PlayEvent *> PlayData::mergePlayEvents(std::vector<PlayEvent *> & one, std::vector<PlayEvent *> & two) {
         std::vector<PlayEvent *> merged = one;
 
-        Utils::write_log("mergePlayEvents enter");
         for (PlayEvent * event : two) {
             std::vector<PlayEvent *>::iterator it = std::find_if(one.begin(), one.end(), [event](PlayEvent * pot) {
                 return (event->type == pot->type && event->titleID == pot->titleID &&
@@ -379,7 +369,6 @@ namespace NX {
 
         one.clear();
         two.clear();
-        Utils::write_log("mergePlayEvents exit");
         return merged;
     }
 
@@ -395,10 +384,8 @@ namespace NX {
         PlayEventsAndSummaries pdmData = pdmThread.get();
         PlayEventsAndSummaries impData = impThread.get();
 
-        Utils::write_log("Read in all data simultaneously finished");
         this->events = this->mergePlayEvents(pdmData.first, impData.first);
         this->summaries = impData.second;
-        Utils::write_log("mergePlayEvents() finished");
     }
 
     std::vector<Title *> PlayData::getMissingTitles(std::vector<Title *> passed) {
@@ -507,8 +494,17 @@ namespace NX {
         PdmPlayStatistics tmp;
         pdmqryQueryPlayStatisticsByApplicationIdAndUserAccountId(titleID, userID, false, &tmp);
         PlayStatistics * stats = new PlayStatistics;
-        stats->firstPlayed = tmp.first_timestamp_user;
-        stats->lastPlayed = tmp.last_timestamp_user;
+        if (tmp.first_timestamp_user != 0 && tmp.last_timestamp_user != 0) {
+            stats->firstPlayed = tmp.first_timestamp_user;
+            stats->lastPlayed = tmp.last_timestamp_user;
+        } else {
+            auto it = std::find_if(this->summaries.begin(), this->summaries.end(), [titleID](auto s){ return (s->titleID == titleID); });
+            if (it != this->summaries.end()) {
+                stats->firstPlayed = (*it)->firstPlayed;
+                stats->lastPlayed = (*it)->lastPlayed;
+            }
+        }
+
         stats->playtime = tmp.playtime / 1000 / 1000 / 1000; //the unit of playtime in PdmPlayStatistics is ns
         stats->launches = tmp.total_launches;
         return stats;

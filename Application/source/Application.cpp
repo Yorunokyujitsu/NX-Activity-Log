@@ -5,7 +5,6 @@
 #include "utils/Lang.hpp"
 #include "utils/UpdateUtils.hpp"
 #include "utils/Utils.hpp"
-#include "utils/Debug.hpp"
 
 #include "ui/screen/AdjustPlaytime.hpp"
 #include "ui/screen/AllActivity.hpp"
@@ -25,28 +24,22 @@ namespace Main {
         // Start all required services
         Utils::NX::startServices();
         Utils::Curl::init();
-        Utils::write_log("Services started and Crul init finished!");
 
         // Create config object and read in values
         this->config_ = new Config();
         this->config_->readConfig();
-        Utils::write_log("Read config file finished!");
 
         // Set language
         if (!Utils::Lang::setLanguage(this->config_->gLang())) {
             this->window->exit();
         }
-        Utils::write_log("Set language finished!");
 
         this->playdata_ = new NX::PlayData();
-        Utils::write_log("NX::PlayData() finished!");
         this->theme_ = new Theme(this->config_->gTheme());
-        Utils::write_log("Theme(this->config_->gTheme()) finished!");
 
         // Start update thread
         this->hasUpdate_ = false;
         this->updateThread = std::async(std::launch::async, &Application::checkForUpdate, this);
-        Utils::write_log("Start update thread finished!");
 
         // Check if launched via user page and if so only use the chosen user
         NX::User * u = Utils::NX::getUserPageUser();
@@ -55,7 +48,6 @@ namespace Main {
             this->isUserPage_ = true;
             this->users.push_back(u);
         }
-        Utils::write_log("Check user page finished!");
 
         // Set view to today and by day
         this->tm = Utils::Time::getTmForCurrentTime();
@@ -75,14 +67,12 @@ namespace Main {
         }
         this->tmCopy = this->tm;
         this->viewTypeCopy = this->viewType;
-        Utils::write_log("Set view to today and by day finished!");
 
         // Populate users vector
         if (!this->isUserPage_) {
             this->users = Utils::NX::getUserObjects();
         }
         this->userIdx = 0;
-        Utils::write_log("Populate users vector finished!");
 
         // Populate titles vector
         this->titles = Utils::NX::getTitleObjects(this->users);
@@ -91,28 +81,24 @@ namespace Main {
             this->titles.push_back(title);
         }
         this->titleIdx = 0;
-        Utils::write_log("Populate titles vector finished!");
 
         // Create Aether instance (ignore log messages for now)
         this->window = new Aether::Window("NX-Activity-Log", 1280, 720, [](const std::string message, const bool important) {
 
         });
         // this->window->showDebugInfo(true);
-        Utils::write_log("Create Aether instance finished!");
 
         // Create overlays
         this->dtpicker = nullptr;
         this->periodpicker = new Aether::PopupList("common.view.heading"_lang);
         this->periodpicker->setBackLabel("common.buttonHint.back"_lang);
         this->periodpicker->setOKLabel("common.buttonHint.ok"_lang);
-        Utils::write_log("Create overlays finished!");
 
         // Setup screens
         this->setDisplayTheme();
         this->createReason = ScreenCreate::Normal;
         this->createScreens();
         this->reinitScreens_ = ReinitState::False;
-        Utils::write_log("Setup screens finished!");
 
         if (this->isUserPage_) {
             // Skip UserSelect screen if launched via user page
@@ -123,7 +109,6 @@ namespace Main {
             this->window->setFadeOut(true);
             this->setScreen(ScreenID::UserSelect);
         }
-        Utils::write_log("Start screens finished!");
     }
 
     void Application::checkForUpdate() {
@@ -470,16 +455,13 @@ namespace Main {
             // Check if screens should be recreated
             if (this->reinitScreens_ == ReinitState::Wait) {
                 this->reinitScreens_ = ReinitState::True;
-                Utils::write_log("Waiting for reinit screens...");
             } else if (this->reinitScreens_ == ReinitState::True) {
-                Utils::write_log("Reinit screens start!");
                 this->reinitScreens_ = ReinitState::False;
                 this->window->removeScreen();
                 this->deleteScreens();
                 this->setDisplayTheme();
                 this->createScreens();
                 this->setScreen(this->screen);
-                Utils::write_log("Reinit screens finished!");
             }
         }
     }

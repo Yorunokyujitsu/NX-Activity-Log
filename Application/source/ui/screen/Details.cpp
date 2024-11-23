@@ -4,7 +4,6 @@
 #include "ui/element/ListSession.hpp"
 #include "utils/Utils.hpp"
 #include "utils/Time.hpp"
-#include "utils/Debug.hpp"
 
 // Values for summary appearance
 #define SUMMARY_BOX_HEIGHT 60
@@ -656,7 +655,7 @@ namespace Screen {
 
         if (ps->launches == 0) {
             // Add in dummy data if not launched before (due to adjustment)
-            pss->firstPlayed = Utils::Time::posixTimestampToPdm(Utils::Time::getTimeT(Utils::Time::getTmForCurrentTime()));
+            pss->firstPlayed = Utils::Time::getTimeT(Utils::Time::getTmForCurrentTime());
             pss->lastPlayed = pss->firstPlayed;
             ps->launches = 1;
         }
