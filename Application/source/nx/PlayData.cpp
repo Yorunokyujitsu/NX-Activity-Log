@@ -165,29 +165,33 @@ namespace NX {
     }
 
     PlayEventsAndSummaries PlayData::readPlayDataFromPdm() {
+        Result rc;
         PlayEventsAndSummaries ret;
 
         // Position of first event to read
         s32 offset = 0;
         // Total events read in iteration
-        s32 total_read = 1;
+        s32 playedTotal = 1;
 
         // Array to store read events
         PdmPlayEvent * pEvents = new PdmPlayEvent[MAX_PROCESS_ENTRIES];
 
         // Read all events
-        while (total_read > 0) {
-            Result rc = pdmqryQueryPlayEvent(offset, pEvents, MAX_PROCESS_ENTRIES, &total_read);
-            if (R_SUCCEEDED(rc)) {
-                // Set next read position to next event
-                offset += total_read;
+        while (playedTotal > 0) {
+            rc = pdmqryQueryPlayEvent(offset, pEvents, MAX_PROCESS_ENTRIES, &playedTotal);
+            if (R_FAILED(rc) || playedTotal == 0) {
+                continue;
+            }
 
-                // Process read events
-                for (s32 i = 0; i < total_read; i++) {
-                    PlayEvent * event;
+            // Set next read position to next event
+            offset += playedTotal;
 
-                    // Populate PlayEvent based on event type
-                    switch (pEvents[i].play_event_type) {
+            // Process read events
+            for (s32 i = 0; i < playedTotal; i++) {
+                PlayEvent * event;
+
+                // Populate PlayEvent based on event type
+                switch (pEvents[i].play_event_type) {
                         case PdmPlayEventType_Account:
                             // Ignore this event if type is 2
                             if (pEvents[i].event_data.account.type == 2) {
@@ -248,15 +252,14 @@ namespace NX {
                         default:
                             continue;
                             break;
-                    }
-
-                    // Set timestamps
-                    event->clockTimestamp = pEvents[i].timestamp_user;
-                    event->steadyTimestamp = pEvents[i].timestamp_steady;
-
-                    // Add PlayEvent to vector
-                    ret.first.push_back(event);
                 }
+
+                // Set timestamps
+                event->clockTimestamp = pEvents[i].timestamp_user;
+                event->steadyTimestamp = pEvents[i].timestamp_steady;
+
+                // Add PlayEvent to vector
+                ret.first.push_back(event);
             }
         }
 

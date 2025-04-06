@@ -150,23 +150,36 @@ namespace Utils::NX {
         // (this doesn't include installed games that haven't been played)
         std::vector<TitleID> playedIDs;
         for (auto user : u) {
+            // Position of first event to read
+            s32 offset = 0;
+            // Total events read in iteration
             s32 playedTotal = 0;
-            TitleID tmpID = 0;
-            PdmAccountPlayEvent *userPlayEvents = new PdmAccountPlayEvent[MAX_TITLES];
-            rc = pdmqryQueryAccountPlayEvent(0, user->ID(), userPlayEvents, MAX_TITLES, &playedTotal);
-            if (R_FAILED(rc) || playedTotal == 0) {
-                delete[] userPlayEvents;
-                continue;
-            }
 
-            // Push back ID if not already in the vector
-            for (s32 j = 0; j < playedTotal; j++) {
-                tmpID = (static_cast<TitleID>(userPlayEvents[j].application_id[0]) << 32) | userPlayEvents[j].application_id[1];
-                if (std::find_if(playedIDs.begin(), playedIDs.end(), [tmpID](auto id){ return (id == tmpID && tmpID != 0); }) == playedIDs.end()) {
-                    playedIDs.push_back(tmpID);
+            // Array to store read events
+            PdmAccountPlayEvent *pEvents = new PdmAccountPlayEvent[MAX_TITLES];
+
+            TitleID tmpID = 0;
+            // Read all events
+            while (playedTotal > 0) {
+                rc = pdmqryQueryAccountPlayEvent(offset, user->ID(), pEvents, MAX_TITLES, &playedTotal);
+                if (R_FAILED(rc) || playedTotal == 0) {
+                    break;
+                }
+
+                // Set next read position to next event
+                offset += playedTotal;
+
+                // Push back ID if not already in the vector
+                for (s32 i = 0; i < playedTotal; i++) {
+                    tmpID = (static_cast<TitleID>(pEvents[].application_id[0]) << 32) | pEvents[i].application_id[1];
+                    if (std::find_if(playedIDs.begin(), playedIDs.end(), [tmpID](auto id){ return (id == tmpID && tmpID != 0); }) == playedIDs.end()) {
+                        playedIDs.push_back(tmpID);
+                    }
                 }
             }
-            delete[] userPlayEvents;
+
+            // Free memory allocated to array
+            delete[] pEvents;
         }
 
         // Get IDs of all installed titles
