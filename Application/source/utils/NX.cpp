@@ -171,7 +171,7 @@ namespace Utils::NX {
 
                 // Push back ID if not already in the vector
                 for (s32 i = 0; i < playedTotal; i++) {
-                    tmpID = (static_cast<TitleID>(pEvents[].application_id[0]) << 32) | pEvents[i].application_id[1];
+                    tmpID = (static_cast<TitleID>(pEvents[i].application_id[0]) << 32) | pEvents[i].application_id[1];
                     if (std::find_if(playedIDs.begin(), playedIDs.end(), [tmpID](auto id){ return (id == tmpID && tmpID != 0); }) == playedIDs.end()) {
                         playedIDs.push_back(tmpID);
                     }
