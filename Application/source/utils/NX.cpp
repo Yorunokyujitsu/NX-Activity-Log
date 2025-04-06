@@ -145,7 +145,7 @@ namespace Utils::NX {
     }
 
     std::vector<::NX::Title *> getTitleObjects(std::vector<::NX::User *> u) {
-        Result rc;
+        Result rc = 0;
         // Get ALL played titles for ALL users
         // (this doesn't include installed games that haven't been played)
         std::vector<TitleID> playedIDs;
@@ -153,41 +153,41 @@ namespace Utils::NX {
             // Position of first event to read
             s32 offset = 0;
             // Total events read in iteration
-            s32 playedTotal = 0;
+            s32 playedTotal = 1;
 
             // Array to store read events
-            PdmAccountPlayEvent *pEvents = new PdmAccountPlayEvent[MAX_TITLES];
+            PdmAccountPlayEvent *userPlayEvents  = new PdmAccountPlayEvent[MAX_TITLES];
 
             TitleID tmpID = 0;
             // Read all events
             while (playedTotal > 0) {
-                rc = pdmqryQueryAccountPlayEvent(offset, user->ID(), pEvents, MAX_TITLES, &playedTotal);
-                if (R_FAILED(rc) || playedTotal == 0) {
-                    break;
-                }
+                memset(userPlayEvents , 0, MAX_TITLES * sizeof(PdmAccountPlayEvent));
+                rc = pdmqryQueryAccountPlayEvent(offset, user->ID(), userPlayEvents , MAX_TITLES, &playedTotal);
+                if (R_SUCCEEDED(rc)) {
+                    // Set next read position to next event
+                    offset += playedTotal;
 
-                // Set next read position to next event
-                offset += playedTotal;
-
-                // Push back ID if not already in the vector
-                for (s32 i = 0; i < playedTotal; i++) {
-                    tmpID = (static_cast<TitleID>(pEvents[i].application_id[0]) << 32) | pEvents[i].application_id[1];
-                    if (std::find_if(playedIDs.begin(), playedIDs.end(), [tmpID](auto id){ return (id == tmpID && tmpID != 0); }) == playedIDs.end()) {
-                        playedIDs.push_back(tmpID);
+                    // Push back ID if not already in the vector
+                    for (s32 i = 0; i < playedTotal; i++) {
+                        tmpID = (static_cast<TitleID>(userPlayEvents[i].application_id[0]) << 32) | userPlayEvents[i].application_id[1];
+                        if (std::find_if(playedIDs.begin(), playedIDs.end(), [tmpID](auto id){ return (id == tmpID && tmpID != 0); }) == playedIDs.end()) {
+                            playedIDs.push_back(tmpID);
+                        }
                     }
                 }
             }
 
             // Free memory allocated to array
-            delete[] pEvents;
+            delete[] userPlayEvents ;
         }
 
         // Get IDs of all installed titles
         std::vector<TitleID> installedIDs;
-        NsApplicationRecord * records = new NsApplicationRecord[MAX_TITLES];
+        NsApplicationRecord *records = new NsApplicationRecord[MAX_TITLES];
         s32 count = 0;
         s32 out = 0;
         while (true) {
+            memset(records, 0, MAX_TITLES * sizeof(NsApplicationRecord));
             rc = nsListApplicationRecord(records, MAX_TITLES, count, &out);
             // Break if at the end or no titles
             if (R_FAILED(rc) || out == 0){

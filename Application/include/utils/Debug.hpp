@@ -6,7 +6,7 @@
 #include <cstdio>
 #include <mutex>
 
-//#define ENABLE_DEBUG
+#define ENABLE_DEBUG
 #define MAX_LOG_LEN 512
 
 namespace Utils {

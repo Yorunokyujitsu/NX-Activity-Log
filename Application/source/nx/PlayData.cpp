@@ -6,7 +6,6 @@
 #include "nx/PlayData.hpp"
 #include "utils/NX.hpp"
 #include "utils/Time.hpp"
-#include "utils/Debug.hpp"
 
 // Maximum number of entries to process in one iteration
 #define MAX_PROCESS_ENTRIES 4096
@@ -174,10 +173,11 @@ namespace NX {
         s32 playedTotal = 1;
 
         // Array to store read events
-        PdmPlayEvent * pEvents = new PdmPlayEvent[MAX_PROCESS_ENTRIES];
+        PdmPlayEvent *pEvents = new PdmPlayEvent[MAX_PROCESS_ENTRIES];
 
         // Read all events
         while (playedTotal > 0) {
+            memset(pEvents, 0, MAX_PROCESS_ENTRIES * sizeof(PdmPlayEvent));
             rc = pdmqryQueryPlayEvent(offset, pEvents, MAX_PROCESS_ENTRIES, &playedTotal);
             if (R_FAILED(rc) || playedTotal == 0) {
                 break;
@@ -188,70 +188,69 @@ namespace NX {
 
             // Process read events
             for (s32 i = 0; i < playedTotal; i++) {
-                PlayEvent * event;
+                PlayEvent *event;
 
                 // Populate PlayEvent based on event type
                 switch (pEvents[i].play_event_type) {
-                        case PdmPlayEventType_Account:
-                            // Ignore this event if type is 2
-                            if (pEvents[i].event_data.account.type == 2) {
-                                continue;
-                            }
-                            event = new PlayEvent;
-                            event->type = PlayEvent_Account;
-
-                            // UserID words are wrong way around (why Nintendo?)
-                            event->userID.uid[0] = pEvents[i].event_data.account.uid[0];
-                            event->userID.uid[0] = (event->userID.uid[0] << 32) | pEvents[i].event_data.account.uid[1];
-                            event->userID.uid[1] = (event->userID.uid[1] << 32) | pEvents[i].event_data.account.uid[2];
-                            event->userID.uid[1] = (event->userID.uid[1] << 32) | pEvents[i].event_data.account.uid[3];
-
-                            // Set account event type
-                            switch (pEvents[i].event_data.account.type) {
-                                case 0:
-                                    event->eventType = Account_Active;
-                                    break;
-                                case 1:
-                                    event->eventType = Account_Inactive;
-                                    break;
-                            }
-                            break;
-
-                        case PdmPlayEventType_Applet:
-                            // Ignore this event based on log policy
-                            if (pEvents[i].event_data.applet.log_policy != PdmPlayLogPolicy_All) {
-                                continue;
-                            }
-                            event = new PlayEvent;
-                            event->type = PlayEvent_Applet;
-
-                            // Join two halves of title ID
-                            event->titleID = pEvents[i].event_data.applet.program_id[0];
-                            event->titleID = (event->titleID << 32) | pEvents[i].event_data.applet.program_id[1];
-
-                            // Set applet event type
-                            switch (pEvents[i].event_data.applet.event_type) {
-                                case PdmAppletEventType_Launch:
-                                    event->eventType = Applet_Launch;
-                                    break;
-                                case PdmAppletEventType_Exit:
-                                case PdmAppletEventType_Exit5:
-                                case PdmAppletEventType_Exit6:
-                                    event->eventType = Applet_Exit;
-                                    break;
-                                case PdmAppletEventType_InFocus:
-                                    event->eventType = Applet_InFocus;
-                                    break;
-                                case PdmAppletEventType_OutOfFocus:
-                                case PdmAppletEventType_OutOfFocus4:
-                                    event->eventType = Applet_OutFocus;
-                                    break;
-                            }
-                            break;
-                        // Do nothing for other event types
-                        default:
+                    case PdmPlayEventType_Account:
+                        // Ignore this event if type is 2
+                        if (pEvents[i].event_data.account.type == 2) {
                             continue;
-                            break;
+                        }
+                        event = new PlayEvent;
+                        event->type = PlayEvent_Account;
+
+                        // UserID words are wrong way around (why Nintendo?)
+                        event->userID.uid[0] = pEvents[i].event_data.account.uid[0];
+                        event->userID.uid[0] = (event->userID.uid[0] << 32) | pEvents[i].event_data.account.uid[1];
+                        event->userID.uid[1] = (event->userID.uid[1] << 32) | pEvents[i].event_data.account.uid[2];
+                        event->userID.uid[1] = (event->userID.uid[1] << 32) | pEvents[i].event_data.account.uid[3];
+
+                        // Set account event type
+                        switch (pEvents[i].event_data.account.type) {
+                            case 0:
+                                event->eventType = Account_Active;
+                                break;
+                            case 1:
+                                event->eventType = Account_Inactive;
+                                break;
+                        }
+                        break;
+                    case PdmPlayEventType_Applet:
+                        // Ignore this event based on log policy
+                        if (pEvents[i].event_data.applet.log_policy != PdmPlayLogPolicy_All) {
+                            continue;
+                        }
+                        event = new PlayEvent;
+                        event->type = PlayEvent_Applet;
+
+                        // Join two halves of title ID
+                        event->titleID = pEvents[i].event_data.applet.program_id[0];
+                        event->titleID = (event->titleID << 32) | pEvents[i].event_data.applet.program_id[1];
+
+                        // Set applet event type
+                        switch (pEvents[i].event_data.applet.event_type) {
+                            case PdmAppletEventType_Launch:
+                                event->eventType = Applet_Launch;
+                                break;
+                            case PdmAppletEventType_Exit:
+                            case PdmAppletEventType_Exit5:
+                            case PdmAppletEventType_Exit6:
+                                event->eventType = Applet_Exit;
+                                break;
+                            case PdmAppletEventType_InFocus:
+                                event->eventType = Applet_InFocus;
+                                break;
+                            case PdmAppletEventType_OutOfFocus:
+                            case PdmAppletEventType_OutOfFocus4:
+                                event->eventType = Applet_OutFocus;
+                                break;
+                        }
+                        break;
+                    // Do nothing for other event types
+                    default:
+                        continue;
+                        break;
                 }
 
                 // Set timestamps
@@ -265,16 +264,6 @@ namespace NX {
 
         // Free memory allocated to array
         delete[] pEvents;
-
-#ifdef ENABLE_DEBUG
-        for (auto event : ret.first) {
-            if (event->userID.uid[1] == 0 && event->userID.uid[0] == 0) {
-                Utils::write_log("offset=%d, event: type=%u titleID=%016llx applet_type: %u clockTimestamp=%llu steadyTimestamp=%llu", offset, event->type, event->titleID, event->eventType, event->clockTimestamp, event->steadyTimestamp);
-            } else {
-                Utils::write_log("offset=%d, event: type=%u userID=%016llx_%016llx account_type: %u clockTimestamp=%llu steadyTimestamp=%llu", offset, event->type, event->userID.uid[1], event->userID.uid[0], event->eventType, event->clockTimestamp, event->steadyTimestamp);
-            }
-        }
-#endif
 
         return ret;
     }
