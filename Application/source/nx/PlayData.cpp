@@ -180,7 +180,7 @@ namespace NX {
         while (playedTotal > 0) {
             rc = pdmqryQueryPlayEvent(offset, pEvents, MAX_PROCESS_ENTRIES, &playedTotal);
             if (R_FAILED(rc) || playedTotal == 0) {
-                continue;
+                break;
             }
 
             // Set next read position to next event
