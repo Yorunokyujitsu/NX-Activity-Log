@@ -57,6 +57,10 @@ std::string toString(Language l) {
             str = "日本語";
             break;
 
+        case Language::Ukrainian:
+            str = "Українська мова";
+            break;
+
         default:
             break;
     }
