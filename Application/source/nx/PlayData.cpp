@@ -189,6 +189,7 @@ namespace NX {
             // Process read events
             for (s32 i = 0; i < playedTotal; i++) {
                 PlayEvent *event;
+                TitleID tmpID;
 
                 // Populate PlayEvent based on event type
                 switch (pEvents[i].play_event_type) {
@@ -197,6 +198,7 @@ namespace NX {
                         if (pEvents[i].event_data.account.type == 2) {
                             continue;
                         }
+
                         event = new PlayEvent;
                         event->type = PlayEvent_Account;
 
@@ -221,12 +223,19 @@ namespace NX {
                         if (pEvents[i].event_data.applet.log_policy != PdmPlayLogPolicy_All) {
                             continue;
                         }
+
+                        // Ignore event with titleID 0
+                        tmpID = pEvents[i].event_data.applet.program_id[0];
+                        tmpID = (tmpID << 32) | pEvents[i].event_data.applet.program_id[1];
+                        if (tmpID == 0) {
+                            continue;
+                        }
+
                         event = new PlayEvent;
                         event->type = PlayEvent_Applet;
 
                         // Join two halves of title ID
-                        event->titleID = pEvents[i].event_data.applet.program_id[0];
-                        event->titleID = (event->titleID << 32) | pEvents[i].event_data.applet.program_id[1];
+                        event->titleID = tmpID;
 
                         // Set applet event type
                         switch (pEvents[i].event_data.applet.event_type) {
@@ -301,6 +310,10 @@ namespace NX {
                         if (event["clockTimestamp"] != nullptr && event["steadyTimestamp"] != nullptr && event["type"] != nullptr) {
                             EventType type = static_cast<EventType>(event["type"]);
 
+                            TitleID tmpID = title["id"];
+                            if (tmpID == 0)
+                                continue;
+
                             PlayEvent *evt = new PlayEvent;
                             evt->type = (type == Account_Active || type == Account_Inactive ? PlayEvent_Account : PlayEvent_Applet);
                             evt->userID = {user["id"][0], user["id"][1]};
@@ -319,6 +332,10 @@ namespace NX {
                 if (title["summary"] != nullptr) {
                     nlohmann::json summary = title["summary"];
                     if (summary["firstPlayed"] != nullptr && summary["lastPlayed"] != nullptr && summary["playtime"] != nullptr && summary["launches"] != nullptr) {
+                        TitleID tmpID = title["id"];
+                        if (tmpID == 0)
+                            continue;
+
                         PlayStatistics * stats = new PlayStatistics;
                         stats->titleID = title["id"];
                         stats->firstPlayed = summary["firstPlayed"];
