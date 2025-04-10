@@ -302,6 +302,10 @@ namespace NX {
 
             // Iterate over each title
             for (nlohmann::json title : user["titles"]) {
+                if (title["id"] == 0) {
+                    continue;
+                }
+
                 bool hasEntry = false;
 
                 // Create events for title
@@ -309,10 +313,6 @@ namespace NX {
                     for (nlohmann::json event : title["events"]) {
                         if (event["clockTimestamp"] != nullptr && event["steadyTimestamp"] != nullptr && event["type"] != nullptr) {
                             EventType type = static_cast<EventType>(event["type"]);
-
-                            TitleID tmpID = title["id"];
-                            if (tmpID == 0)
-                                continue;
 
                             PlayEvent *evt = new PlayEvent;
                             evt->type = (type == Account_Active || type == Account_Inactive ? PlayEvent_Account : PlayEvent_Applet);
@@ -332,10 +332,6 @@ namespace NX {
                 if (title["summary"] != nullptr) {
                     nlohmann::json summary = title["summary"];
                     if (summary["firstPlayed"] != nullptr && summary["lastPlayed"] != nullptr && summary["playtime"] != nullptr && summary["launches"] != nullptr) {
-                        TitleID tmpID = title["id"];
-                        if (tmpID == 0)
-                            continue;
-
                         PlayStatistics * stats = new PlayStatistics;
                         stats->titleID = title["id"];
                         stats->firstPlayed = summary["firstPlayed"];
@@ -350,8 +346,10 @@ namespace NX {
 
                 // Store data if entry added
                 if (hasEntry) {
-                    if (std::find_if(this->titles.begin(), this->titles.end(), [title](std::pair<u64, std::string> entry) { return (title["id"] == entry.first && title["id"] != 0); }) == this->titles.end()) {
-                        this->titles.push_back(std::make_pair(title["id"], title["name"]));
+                    if (std::find_if(this->titles.begin(), this->titles.end(), [title](std::pair<u64, std::string> entry) { return (title["id"] == entry.first); }) == this->titles.end()) {
+                        if (title["id"] != 0) {
+                            this->titles.push_back(std::make_pair(title["id"], title["name"]));
+                        }
                     }
                 }
             }

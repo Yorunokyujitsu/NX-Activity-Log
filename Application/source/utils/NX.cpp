@@ -170,8 +170,10 @@ namespace Utils::NX {
                     // Push back ID if not already in the vector
                     for (s32 i = 0; i < playedTotal; i++) {
                         tmpID = (static_cast<TitleID>(userPlayEvents[i].application_id[0]) << 32) | userPlayEvents[i].application_id[1];
-                        if (std::find_if(playedIDs.begin(), playedIDs.end(), [tmpID](auto id){ return (id == tmpID && tmpID != 0); }) == playedIDs.end()) {
-                            playedIDs.push_back(tmpID);
+                        if (std::find_if(playedIDs.begin(), playedIDs.end(), [tmpID](auto id){ return (id == tmpID); }) == playedIDs.end()) {
+                            if (tmpID != 0) {
+                                playedIDs.push_back(tmpID);
+                            }
                         }
                     }
                 }
@@ -194,7 +196,9 @@ namespace Utils::NX {
                 break;
             }
             for (s32 i = 0; i < out; i++) {
-                installedIDs.push_back((records + i)->application_id);
+                if ((records + i)->application_id != 0) {
+                    installedIDs.push_back((records + i)->application_id);
+                }
             }
             count += out;
         }
