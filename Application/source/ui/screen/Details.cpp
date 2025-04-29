@@ -191,7 +191,6 @@ namespace Screen {
                         this->graph->setLabel(i, std::to_string(i + 1) + Utils::Time::getDateSuffix(i + 1));
                     }
                     t.tm_hour = 0;
-                    e = t;
                     e.tm_hour = 23;
                     uint64_t max = 0;
                     for (size_t i = 0; i < this->graph->entries(); i++) {
@@ -227,7 +226,7 @@ namespace Screen {
                     }
                     t.tm_mday = 1;
                     t.tm_hour = 0;
-                    e = t;
+                    e.tm_mday = 1;
                     e.tm_hour = 23;
                     uint64_t max = 0;
                     for (size_t i = 0; i < this->graph->entries(); i++) {
