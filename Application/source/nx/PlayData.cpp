@@ -100,13 +100,11 @@ namespace NX {
         for (size_t i = 0; i < sessions.size(); i++) {
             stats->launches++;
 
-            u64 infocus_ts = 0;
-            u64 infocus_clock = 0;
-            u64 outfocus_ts = 0;
-            u64 outfocus_clock = 0;
-            u64 infoucs_offset = 0;
-            u64 outfoucs_offset = 0;
-
+            u64 last_ts = 0;
+            u64 last_clock = 0;
+            u64 new_ts = 0;
+            u64 new_clock = 0;
+            bool in_before = false;
             bool done = false;
             for (size_t j = sessions[i].index; j < sessions[i].index + sessions[i].num; j++) {
                 if (done) {
@@ -129,29 +127,22 @@ namespace NX {
                         break;
 
                     case Applet_InFocus:
-                        infocus_ts = this->events[j]->steadyTimestamp;
-                        infocus_clock = this->events[j]->clockTimestamp;
-                        infoucs_offset = infocus_clock - infocus_ts;
-                        if (infocus_clock < start_ts) {
-                            infocus_ts = start_ts - infoucs_offset;
-                        }
-                        if (infocus_clock >= end_ts) {
+                        last_ts = this->events[j]->steadyTimestamp;
+                        last_clock = this->events[j]->clockTimestamp;
+                        if (last_clock < start_ts) {
+                            last_ts = last_ts + start_ts - last_clock;
+                        } else if (last_clock >= end_ts) {
                             done = true;
                         }
                         break;
 
                     case Applet_OutFocus:
-                        outfocus_ts = this->events[j]->steadyTimestamp;
-                        outfocus_clock = this->events[j]->clockTimestamp;
-                        outfoucs_offset = outfocus_clock - outfocus_ts;
-                        if (outfocus_clock >= end_ts) {
-                            outfocus_ts = end_ts - outfoucs_offset;
+                        new_ts = this->events[j]->steadyTimestamp;
+                        new_clock = this->events[j]->clockTimestamp;
+                        if (new_clock >= end_ts) {
+                            new_ts = new_ts + new_clock - end_ts;
                         }
-                        if (outfocus_clock <= start_ts) {
-                            done = true;
-                        } else {
-                            stats->playtime += (outfocus_ts - infocus_ts);
-                        }
+                        stats->playtime += (new_ts - last_ts);
 
                         // Move to last out focus (I don't know why the log has multiple)
                         while (j+1 < this->events.size()) {
@@ -165,6 +156,7 @@ namespace NX {
                 }
             }
         }
+
         return stats;
     }
 
