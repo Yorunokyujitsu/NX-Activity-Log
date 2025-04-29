@@ -6,7 +6,6 @@
 #include "nx/PlayData.hpp"
 #include "utils/NX.hpp"
 #include "utils/Time.hpp"
-//#include "utils/Debug.hpp"
 
 // Maximum number of entries to process in one iteration
 #define MAX_PROCESS_ENTRIES 4096
@@ -97,7 +96,6 @@ namespace NX {
             return stats;
         }
 
-        //Utils::write_log("start_ts: %" PRIu64 ", end_ts: %" PRIu64 "\n", start_ts, end_ts);
         // Iterate over valid sessions to calculate statistics
         for (size_t i = 0; i < sessions.size(); i++) {
             stats->launches++;
@@ -106,15 +104,15 @@ namespace NX {
             u64 infocus_clock = 0;
             u64 outfocus_ts = 0;
             u64 outfocus_clock = 0;
+            u64 infoucs_offset = 0;
+            u64 outfoucs_offset = 0;
 
-            //Utils::write_log("=>sessions[%u]:\n", i);
             bool done = false;
             for (size_t j = sessions[i].index; j < sessions[i].index + sessions[i].num; j++) {
                 if (done) {
                     break;
                 }
 
-                //Utils::write_log("==>index: %u, num: %u\n", sessions[i].index, sessions[i].num);
                 switch (this->events[j]->eventType) {
                     case Applet_Launch:
                         // Skip to first in focus event
@@ -133,31 +131,27 @@ namespace NX {
                     case Applet_InFocus:
                         infocus_ts = this->events[j]->steadyTimestamp;
                         infocus_clock = this->events[j]->clockTimestamp;
+                        infoucs_offset = infocus_clock - infocus_ts;
+                        if (infocus_clock < start_ts) {
+                            infocus_ts = start_ts - infoucs_offset;
+                        }
                         if (infocus_clock >= end_ts) {
                             done = true;
-                        } else {
-                            if (infocus_clock < start_ts) {
-                                infocus_ts = start_ts - (infocus_clock - infocus_ts);
-                            }
                         }
-                        //Utils::write_log("===>Applet_InFocus: infocus_ts: %" PRIu64 ", infocus_clock: %" PRIu64 ", done: %d\n",
-                        //                 infocus_ts, infocus_clock, done);
                         break;
 
                     case Applet_OutFocus:
                         outfocus_ts = this->events[j]->steadyTimestamp;
                         outfocus_clock = this->events[j]->clockTimestamp;
+                        outfoucs_offset = outfocus_clock - outfocus_ts;
+                        if (outfocus_clock >= end_ts) {
+                            outfocus_ts = end_ts - outfoucs_offset;
+                        }
                         if (outfocus_clock <= start_ts) {
                             done = true;
                         } else {
-                            if (outfocus_clock > end_ts) {
-                                outfocus_ts = end_ts - (outfocus_clock - outfocus_ts);
-                            }
                             stats->playtime += (outfocus_ts - infocus_ts);
                         }
-
-                        //Utils::write_log("===>Applet_OutFocus: outfocus_ts: %" PRIu64 ", outfocus_clock: %" PRIu64 ", playtime: %" PRIu64 ", done: %d\n",
-                        //                  outfocus_ts, outfocus_clock, stats->playtime, done);
 
                         // Move to last out focus (I don't know why the log has multiple)
                         while (j+1 < this->events.size()) {
