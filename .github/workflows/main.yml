@@ -16,6 +16,8 @@ jobs:
         run: |
           sudo -n apt-get update
           sudo -n apt-get upgrade -y git build-essential
+          sudo -n apt-get install -y zip python3 python3-pip python3-lz4
+          sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1
         shell: bash
       - name: Update latest libnx
         run: |
@@ -35,14 +37,14 @@ jobs:
       - name: Setup ENV parameters
         run: |
           VER_FILE=Application/Makefile
-          VERSION=$(awk '/^VER_MAJOR/{print $3}' $VER_FILE).$(awk '/^VER_MINOR/{print $3}' $VER_FILE).$(awk '/^VER_MICRO/{print $3}' $VER_FILE)
-          echo "TAG=v${VERSION}" > "${GITHUB_ENV}"
-          echo "RELEASE_NAME=NX-Activity-Log v${VERSION}" >> "${GITHUB_ENV}"
+          VERSION=$(awk '/^APP_VERSION/{print $3}' $VER_FILE)
+          echo "TAG=${VERSION}" >> "${GITHUB_ENV}"
+          echo "RELEASE_NAME=NX-Activity-Log ${VERSION}" >> "${GITHUB_ENV}"
         shell: bash
       - name: Build
         run: |
           export DEVKITPRO=/opt/devkitpro
-          make -j$(nproc)
+          make all
         shell: bash
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2.0.9
@@ -54,4 +56,4 @@ jobs:
           generate_release_notes: yes
           make_latest: true
           files: |
-            ./sdcard/switch/NX-Activity-Log/NX-Activity-Log.nro
+            output/Lockpick_RCM.bin
